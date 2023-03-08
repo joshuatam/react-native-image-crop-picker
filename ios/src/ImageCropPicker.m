@@ -68,6 +68,7 @@ RCT_EXPORT_MODULE();
             @"loadingLabelText": @"Processing assets...",
             @"mediaType": @"any",
             @"showsSelectedCount": @YES,
+            @"saveToPhotos": @NO,
             @"forceJpg": @NO,
             @"sortOrder": @"none",
             @"cropperCancelText": @"Cancel",
@@ -188,7 +189,14 @@ RCT_EXPORT_METHOD(openCamera:(NSDictionary *)options
     if (CFStringCompare ((__bridge CFStringRef) mediaType, kUTTypeMovie, 0) == kCFCompareEqualTo) {
         NSURL *url = [info objectForKey:UIImagePickerControllerMediaURL];
         AVURLAsset *asset = [AVURLAsset assetWithURL:url];
+        NSString *photoPath = [url path];
         NSString *fileName = [[asset.URL path] lastPathComponent];
+
+        if ([[self.options objectForKey:@"saveToPhotos"] boolValue]) {
+            if (UIVideoAtPathIsCompatibleWithSavedPhotosAlbum(photoPath)) {
+                UISaveVideoAtPathToSavedPhotosAlbum(photoPath, nil, nil, nil);
+            }
+        }
         
         [self handleVideo:asset
              withFileName:fileName
@@ -214,6 +222,10 @@ RCT_EXPORT_METHOD(openCamera:(NSDictionary *)options
         NSDictionary *exif;
         if([[self.options objectForKey:@"includeExif"] boolValue]) {
             exif = [info objectForKey:UIImagePickerControllerMediaMetadata];
+        }
+
+        if ([[self.options objectForKey:@"saveToPhotos"] boolValue]) {
+            UIImageWriteToSavedPhotosAlbum(chosenImage, nil, nil, nil);
         }
         
         [self processSingleImagePick:chosenImage withExif:exif withViewController:picker withSourceURL:self.croppingFile[@"sourceURL"] withLocalIdentifier:self.croppingFile[@"localIdentifier"] withFilename:self.croppingFile[@"filename"] withCreationDate:self.croppingFile[@"creationDate"] withModificationDate:self.croppingFile[@"modificationDate"]];

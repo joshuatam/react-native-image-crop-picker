@@ -162,6 +162,13 @@ declare module "react-native-image-crop-picker" {
         includeBase64?: boolean;
 
         /**
+         * When set to true, the image file content will be saved to your file system
+         *
+         * @default false
+         */
+        saveToPhotos?: boolean;
+
+        /**
          * Include image exif data in the response.
          *
          * @default false

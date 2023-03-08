@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -89,6 +90,7 @@ class PickerModule extends ReactContextBaseJavaModule implements ActivityEventLi
     private boolean enableRotationGesture = false;
     private boolean disableCropperColorSetters = false;
     private boolean useFrontCamera = false;
+    private boolean saveToPhotos = false;
     private ReadableMap options;
 
     private String cropperActiveWidgetColor = null;
@@ -145,6 +147,7 @@ class PickerModule extends ReactContextBaseJavaModule implements ActivityEventLi
         enableRotationGesture = options.hasKey("enableRotationGesture") && options.getBoolean("enableRotationGesture");
         disableCropperColorSetters = options.hasKey("disableCropperColorSetters") && options.getBoolean("disableCropperColorSetters");
         useFrontCamera = options.hasKey("useFrontCamera") && options.getBoolean("useFrontCamera");
+        saveToPhotos = options.hasKey("saveToPhotos") && options.getBoolean("saveToPhotos");
         this.options = options;
     }
 
@@ -876,9 +879,47 @@ class PickerModule extends ReactContextBaseJavaModule implements ActivityEventLi
         if (requestCode == IMAGE_PICKER_REQUEST) {
             imagePickerResult(activity, requestCode, resultCode, data);
         } else if (requestCode == CAMERA_PICKER_REQUEST) {
+            if (saveToPhotos) {
+                saveToPublicDirectory(mCameraCaptureURI, reactContext, "photo");
+            }
             cameraPickerResult(activity, requestCode, resultCode, data);
         } else if (requestCode == UCrop.REQUEST_CROP) {
             croppingResult(activity, requestCode, resultCode, data);
+        }
+    }
+
+    public static void saveToPublicDirectory(Uri uri, ReactApplicationContext context, String mediaType) {
+        ContentResolver resolver = context.getContentResolver();
+        Uri mediaStoreUri;
+        ContentValues fileDetails = new ContentValues();
+
+        if (mediaType.equals("video")) {
+            fileDetails.put(MediaStore.Video.Media.DISPLAY_NAME, UUID.randomUUID().toString());
+            fileDetails.put(MediaStore.Video.Media.MIME_TYPE, resolver.getType(uri));
+            mediaStoreUri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, fileDetails);
+        } else {
+            fileDetails.put(MediaStore.Images.Media.DISPLAY_NAME, UUID.randomUUID().toString());
+            fileDetails.put(MediaStore.Video.Media.MIME_TYPE, resolver.getType(uri));
+            mediaStoreUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, fileDetails);
+        }
+
+        copyUri(uri, mediaStoreUri, resolver);
+    }
+
+    public static void copyUri(Uri fromUri, Uri toUri, ContentResolver resolver) {
+        try {
+            OutputStream os = resolver.openOutputStream(toUri);
+            InputStream is = resolver.openInputStream(fromUri);
+
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+
+            while ((bytesRead = is.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
